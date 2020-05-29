@@ -2,7 +2,7 @@
 
 ## 零、MySQL准备
 ### 0.1搭建MGR
-主节点运行如下sql：
+主节点运行如下sql，sys库下创建视图，用于proxysql监控MGR：
 ```sql
 USE sys;
 
@@ -145,9 +145,10 @@ proxysql默认状态开启两个端口
 
 6032管理端口
 
-6033服务端口(应用连接该端口)
+6033服务端口(应用连接该端口，可也进入管理界面更改该配置为指定端口，但是需要重启proxysql服务)
 
 ## 三、进入管理配置界面
+执行如下命令进入管理界面，proxysql的管理类似于MySQL，可以通过更改变量，更改表中数据对proxysql进行配置
 ```sh
 mysql -u admin  -padmin  -h127.0.0.1 -P6032 --prompt='Admin>'
 
@@ -218,7 +219,8 @@ Admin> show tables;
 +----------------------------------------------------+
 32 rows in set (0.00 sec)
 ```
-查看核心配置表
+查看核心配置表：
+
 mysql_servers及mysql_replication_hostgroups表结构
 ```sql
 Admin> show create table mysql_servers\G
@@ -251,6 +253,7 @@ Create Table: CREATE TABLE mysql_replication_hostgroups (
 1 row in set (0.00 sec)
 ```
 ## 六、配置MySQL复制集群中的IP及端口，默认hostgroup_id都设置为1
+将MGR中的节点信息写入mysql_servers表中
 ```sql
 INSERT INTO mysql_servers(hostgroup_id, hostname, port) VALUES (1,'172.18.0.151',3317);
 INSERT INTO mysql_servers(hostgroup_id, hostname, port) VALUES (1,'172.18.0.152',3317);
@@ -266,6 +269,11 @@ Admin> select * from mysql_servers;
 | 1            | 172.18.0.152 | 3317 | 0         | ONLINE | 1      | 0           | 1000            | 0                   | 0       | 0              |         |
 | 1            | 172.18.0.160 | 3317 | 0         | ONLINE | 1      | 0           | 1000            | 0                   | 0       | 0              |         |
 +--------------+--------------+------+-----------+--------+--------+-------------+-----------------+---------------------+---------+----------------+---------+
+```
+将结果生效，并保存的磁盘
+```sql 
+load mysql servers to run;
+save mysql servers to disk;
 ```
 
 ## 七、设置proxysql监控mysql的用户。
@@ -288,7 +296,7 @@ Admin>load mysql variables to runtime;
 ```sql 
 Admin>save mysql variables to disk;
 ```
-## 八、查看监控日志，可以看出在配置监控用户前，连接报错，在用户增加完成后，connect_error为NULL。表示配置正常
+## 八、查看监控日志，在monitor用户增加完成后，connect_error为NULL,表示配置正常。
 ```sql 
 Admin> select * from mysql_server_connect_log;
 +--------------+------+------------------+-------------------------+---------------+
@@ -304,7 +312,7 @@ Admin> select * from mysql_server_connect_log;
 | 172.18.0.152 | 3317 | 1590582280526936 | 1210                    | NULL          |
 ```
 
-## 九、
+## 九、下表将监控MySQL实例是否alive.
 ```sql 
 Admin> select * from mysql_server_ping_log limit 10;
 +--------------+------+------------------+----------------------+------------+
@@ -322,9 +330,13 @@ Admin> select * from mysql_server_ping_log limit 10;
 ```
 
 ## 十、查看mysql_server_group_replication_log此时为空
+该表中记录monitor用户查询sys.gr_member_routing_candidate_status视图的结果，
 
+需要配置mysql_group_replication_hostgroups后，mysql_server_group_replication_log才会写入信息。
 
-## 十一、proxysql通过监控后台sys.gr_member_routing_candidate_status视图（必须创建）;proxysql将节点分组
+## 十一、配置MGR集群分组表：mysql_group_replication_hostgroups
+
+proxysql通过监控后台sys.gr_member_routing_candidate_status视图（必须创建）;proxysql将节点分组
 
 配置MGR分组信息
 ```sql
@@ -346,12 +358,19 @@ Admin> select * from mysql_group_replication_hostgroups;
 为了保证primary节点和secondary节点读到一致的数据。
 max_transactions_behind=N参数配置后，如果从节点事务延时个数超过N后，
 secondary节点将不再有读负载，从reader_hostgroup组中移除，直到延时事务个数降到N以下，节点重新加入reader_hostgroup组。
-1 row in set (0.01 sec)
 
 ## 十二、配置生效后查看状态，会对MySQLserver进行分组
 可以观察到160和151被分配到hostgroup_id=3的组中，即reader_hostgroup
 
-可以更新mysql_servers表中的weight值，对读负载量进行配置。
+可以更新mysql_servers表中的weight值，对读负载量进行配置
+
+查看当前生效状态的runtime_mysql_servers表，
+
+此时proxysql对MGR中的不同节点进行重新分组
+
+primary节点172.18.0.152 分配到hostgroup_id=1的组，即writer_hostgroup
+
+secondary节点172.18.0.151/160 分配到hostgroup_id=3的组，即reader_hostgroup
 ```sql 
 Admin> select * from runtime_mysql_servers;
 +--------------+--------------+------+-----------+--------+--------+-------------+-----------------+---------------------+---------+----------------+---------+
@@ -363,7 +382,7 @@ Admin> select * from runtime_mysql_servers;
 +--------------+--------------+------+-----------+--------+--------+-------------+-----------------+---------------------+---------+----------------+---------+
 ```
 
-## 十三、查看监控状态：
+## 十三、查看mysql_server_group_replication_log监控状态：
 使用如下命令可以看到MGR节点的状态，其中只有主节点read_only为NO
 ```sql 
 Admin> select * from mysql_server_group_replication_log limit 3;
