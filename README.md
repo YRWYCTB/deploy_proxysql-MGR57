@@ -82,6 +82,7 @@ sys.gr_applier_queue_length() as transactions_behind, Count_Transactions_in_queu
 DELIMITER ;
 ```
 上述视图可以用来监控从库延时情况，如下为压测过程中从库事务延时情况
+```sql
 mysql> select * from sys.gr_member_routing_candidate_status;
 +------------------+-----------+---------------------+----------------------+
 | viable_candidate | read_only | transactions_behind | transactions_to_cert |
@@ -89,8 +90,9 @@ mysql> select * from sys.gr_member_routing_candidate_status;
 | YES              | YES       |                   3 |                    2 |
 +------------------+-----------+---------------------+----------------------+
 1 row in set (0.00 sec)
-
+```
 primary节点如下
+```sql
 mysql> select * from sys.gr_member_routing_candidate_status;
 +------------------+-----------+---------------------+----------------------+
 | viable_candidate | read_only | transactions_behind | transactions_to_cert |
@@ -98,25 +100,27 @@ mysql> select * from sys.gr_member_routing_candidate_status;
 | YES              | NO        |                   0 |                    0 |
 +------------------+-----------+---------------------+----------------------+
 1 row in set (0.00 sec)
-
+```
 
 ## 一、安装proxysql，操作系统centos7
 
 ### 1.1下载安装包
-
+```sh
 wget https://github.com/sysown/proxysql/releases/download/v2.0.12/proxysql-2.0.12-1-centos7.x86_64.rpm
-
+```
 proxysql-2.0.12-1-centos7.x86_64.rpm
 ### 1.2 安装依赖，安装proxysql
+```sh
 sudo yum install gnutls
 sudo yum install https://repo.percona.com/yum/percona-release-latest.noarch.rpm
 yum install percona-xtrabackup-24
 
 rpm -ivh proxysql-2.0.12-1-centos7.x86_64.rpm
-
+```
 ## 二、启动proxysql
+```sh
 systemctl start proxysql 
-
+```
 查看状态
 ```sh
 systemctl status proxysql
@@ -138,7 +142,9 @@ May 27 19:14:59 dzst140 proxysql[47492]: 2020-05-27 19:14:59 [INFO] No SSL keys/
 May 27 19:14:59 dzst140 systemd[1]: Started High Performance Advanced Proxy for MySQL.
 ```
 proxysql默认状态开启两个端口
+
 6032管理端口
+
 6033服务端口(应用连接该端口)
 
 ## 三、进入管理配置界面
@@ -172,7 +178,6 @@ Admin>show databases;
 5 rows in set (0.00 sec)
 ```
 使用show tables;命令可以查看核心的配置表。
-
 ```sql
 Admin> show tables;
 +----------------------------------------------------+
@@ -213,10 +218,8 @@ Admin> show tables;
 +----------------------------------------------------+
 32 rows in set (0.00 sec)
 ```
-
 查看核心配置表
 mysql_servers及mysql_replication_hostgroups表结构
-
 ```sql
 Admin> show create table mysql_servers\G
 *************************** 1. row ***************************
@@ -237,7 +240,6 @@ Create Table: CREATE TABLE mysql_servers (
     PRIMARY KEY (hostgroup_id, hostname, port) )
 1 row in set (0.00 sec)
 
-
 Admin> show create table mysql_replication_hostgroups\G
 *************************** 1. row ***************************
        table: mysql_replication_hostgroups
@@ -248,14 +250,12 @@ Create Table: CREATE TABLE mysql_replication_hostgroups (
     comment VARCHAR NOT NULL DEFAULT '', UNIQUE (reader_hostgroup))
 1 row in set (0.00 sec)
 ```
-
 ## 六、配置MySQL复制集群中的IP及端口，默认hostgroup_id都设置为1
 ```sql
 INSERT INTO mysql_servers(hostgroup_id, hostname, port) VALUES (1,'172.18.0.151',3317);
 INSERT INTO mysql_servers(hostgroup_id, hostname, port) VALUES (1,'172.18.0.152',3317);
 INSERT INTO mysql_servers(hostgroup_id, hostname, port) VALUES (1,'172.18.0.160',3317);
 ```
-
 查看结果
 ```sql
 Admin> select * from mysql_servers;
@@ -288,7 +288,6 @@ Admin>load mysql variables to runtime;
 ```sql 
 Admin>save mysql variables to disk;
 ```
-
 ## 八、查看监控日志，可以看出在配置监控用户前，连接报错，在用户增加完成后，connect_error为NULL。表示配置正常
 ```sql 
 Admin> select * from mysql_server_connect_log;
@@ -323,7 +322,6 @@ Admin> select * from mysql_server_ping_log limit 10;
 ```
 
 ## 十、查看mysql_server_group_replication_log此时为空
-
 
 ## 十一、proxysql通过监控后台sys.gr_member_routing_candidate_status视图（必须创建）;proxysql将节点分组
 
@@ -364,6 +362,7 @@ Admin> select * from runtime_mysql_servers;
 ```
 
 ## 十三、查看监控状态：
+使用如下命令可以看到MGR节点的状态，其中只有主节点read_only为NO
 ```sql 
 Admin> select * from mysql_server_group_replication_log limit 3;
 +--------------+------+------------------+-----------------+------------------+-----------+---------------------+-------+
@@ -375,22 +374,23 @@ Admin> select * from mysql_server_group_replication_log limit 3;
 +--------------+------+------------------+-----------------+------------------+-----------+---------------------+-------+
 ```
 
-## 十四、创建用户（基于用户的读写分离）
-
-create user reader identified by '8085782';
+## 十四、创建用户，配置基于用户的读写分离
+MGR中创建用户
+```sql 
+create user reader identified by 'passwd';
 grant select on *.* to reader with grant option;
 
-insert into mysql_users(username,password,active,default_hostgroup) values("tian","8085782",1,1) ;
-insert into mysql_users(username,password,active,default_hostgroup) values("reader","8085782",1,3) ;
+insert into mysql_users(username,password,active,default_hostgroup) values("tian","passwd",1,1) ;
+insert into mysql_users(username,password,active,default_hostgroup) values("reader","passwd",1,3) ;
 
 load mysql users to run;
 save mysql users to disk;
 
 
-Admin>insert into mysql_users(username,password,active,default_hostgroup) values("tian","8085782",1,1) ;
+Admin>insert into mysql_users(username,password,active,default_hostgroup) values("tian","passwd",1,1) ;
 Query OK, 1 row affected (0.00 sec)
 
-Admin>insert into mysql_users(username,password,active,default_hostgroup) values("reader","8085782",1,3) ;
+Admin>insert into mysql_users(username,password,active,default_hostgroup) values("reader","passwd",1,3) ;
 Query OK, 1 row affected (0.00 sec)
 
 Admin>load mysql users to run;
@@ -410,7 +410,7 @@ Admin>select * from runtime_mysql_users;
 | reader   | *E66F04FE5F167BF5F78CB239C283CDCD51A2E33F | 1      | 0       | 3                 |                | 0             | 1                      | 0            | 1       | 0        | 10000           |         |
 +----------+-------------------------------------------+--------+---------+-------------------+----------------+---------------+------------------------+--------------+---------+----------+-----------------+---------+
 4 rows in set (0.01 sec)
-
+```
 读写分离测试
 
 使用两个不同的用户连接proxysql可以将sql路由到不同的default_hostgroup，进而：使用写用户访问最终到primary节点，使用读用户，最终访问secondary节点。
@@ -418,57 +418,29 @@ Admin>select * from runtime_mysql_users;
 此时主节点为152
 
 从节点为151和160
-
-[root@dzst140 ~]# mysql -u tian  -p8085782  -h127.0.0.1 -P6033 -e "select @@server_id";
-mysql: [Warning] Using a password on the command line interface can be insecure.
-+-------------+
-| @@server_id |
-+-------------+
-|     1523317 |
-+-------------+
-[root@dzst140 ~]# mysql -u tian  -p8085782  -h127.0.0.1 -P6033 -e "select @@server_id";
-mysql: [Warning] Using a password on the command line interface can be insecure.
-+-------------+
-| @@server_id |
-+-------------+
-|     1523317 |
-+-------------+
-[root@dzst140 ~]# mysql -u reader  -p8085782  -h127.0.0.1 -P6033 -e "select @@server_id";
+```sh
+[root@dzst140 ~]# mysql -u reader  -ppasswd  -h127.0.0.1 -P6033 -e "select @@server_id";
 mysql: [Warning] Using a password on the command line interface can be insecure.
 +-------------+
 | @@server_id |
 +-------------+
 |     1513317 |
 +-------------+
-[root@dzst140 ~]# mysql -u reader  -p8085782  -h127.0.0.1 -P6033 -e "select @@server_id";
+[root@dzst140 ~]# mysql -u reader  -ppasswd  -h127.0.0.1 -P6033 -e "select @@server_id";
 mysql: [Warning] Using a password on the command line interface can be insecure.
 +-------------+
 | @@server_id |
 +-------------+
 |     1513317 |
 +-------------+
-[root@dzst140 ~]# mysql -u reader  -p8085782  -h127.0.0.1 -P6033 -e "select @@server_id";
-mysql: [Warning] Using a password on the command line interface can be insecure.
-+-------------+
-| @@server_id |
-+-------------+
-|     1513317 |
-+-------------+
-[root@dzst140 ~]# mysql -u reader  -p8085782  -h127.0.0.1 -P6033 -e "select @@server_id";
-mysql: [Warning] Using a password on the command line interface can be insecure.
-+-------------+
-| @@server_id |
-+-------------+
-|     1513317 |
-+-------------+
-[root@dzst140 ~]# mysql -u reader  -p8085782  -h127.0.0.1 -P6033 -e "select @@server_id";
+[root@dzst140 ~]# mysql -u reader  -ppasswd  -h127.0.0.1 -P6033 -e "select @@server_id";
 mysql: [Warning] Using a password on the command line interface can be insecure.
 +-------------+
 | @@server_id |
 +-------------+
 |     1603317 |
 +-------------+
-[root@dzst140 ~]# mysql -u reader  -p8085782  -h127.0.0.1 -P6033 -e "select @@server_id";
+[root@dzst140 ~]# mysql -u reader  -ppasswd  -h127.0.0.1 -P6033 -e "select @@server_id";
 mysql: [Warning] Using a password on the command line interface can be insecure.
 +-------------+
 | @@server_id |
@@ -476,7 +448,7 @@ mysql: [Warning] Using a password on the command line interface can be insecure.
 |     1513317 |
 +-------------+
 [root@dzst140 ~]# 
-
+```
 ## 十五、主节点也可读，基于sql语句的读写分离
 ```sql
 Admin>update mysql_group_replication_hostgroups set writer_is_also_reader =1;
@@ -502,6 +474,7 @@ Admin>select * from runtime_mysql_group_replication_hostgroups;
 1 row in set (0.01 sec)
 ```
 基于sql语句的读写分离
+proxysql执行如下命令
 ```sql 
 UPDATE mysql_users SET default_hostgroup=1; 
 LOAD MYSQL USERS TO RUNTIME;
