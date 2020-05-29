@@ -1,5 +1,7 @@
 # deploy_proxysql-MGR57
-
+参考文档：
+https://github.com/sysown/proxysql/wiki#getting-started
+https://github.com/sysown/proxysql
 ## 零、MySQL准备
 ### 0.1搭建MGR
 主节点运行如下sql，sys库下创建视图，用于proxysql监控MGR：
