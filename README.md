@@ -200,7 +200,9 @@ Admin>show databases;
 ```
 使用show tables;命令可以查看核心的配置表
 
-runtime_开头的表为当前生效的配置表
+runtime_开头的表为当前生效(RUNTIME)的配置表
+
+其他mysql_开头表为MEMORY状态的表(非生效参数)
 ```sql
 Admin> show tables;
 +----------------------------------------------------+
