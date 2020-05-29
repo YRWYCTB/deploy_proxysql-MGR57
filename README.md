@@ -323,6 +323,7 @@ Admin> select * from mysql_server_ping_log limit 10;
 
 ## 十、查看mysql_server_group_replication_log此时为空
 
+
 ## 十一、proxysql通过监控后台sys.gr_member_routing_candidate_status视图（必须创建）;proxysql将节点分组
 
 配置MGR分组信息
@@ -348,6 +349,7 @@ secondary节点将不再有读负载，从reader_hostgroup组中移除，直到�
 1 row in set (0.01 sec)
 
 ## 十二、配置生效后查看状态，会对MySQLserver进行分组
+可以观察到160和151被分配到hostgroup_id=3的组中，即reader_hostgroup
 
 可以更新mysql_servers表中的weight值，对读负载量进行配置。
 ```sql 
