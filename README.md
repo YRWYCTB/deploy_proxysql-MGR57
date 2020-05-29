@@ -248,7 +248,7 @@ Admin> show tables;
 ```
 查看核心配置表：
 
-mysql_servers及mysql_replication_hostgroups表结构
+mysql_servers及mysql_group_replication_hostgroups(MGR需要配置该表)表结构
 ```sql
 Admin> show create table mysql_servers\G
 *************************** 1. row ***************************
@@ -269,15 +269,24 @@ Create Table: CREATE TABLE mysql_servers (
     PRIMARY KEY (hostgroup_id, hostname, port) )
 1 row in set (0.00 sec)
 
-Admin> show create table mysql_replication_hostgroups\G
+Admin>show create table mysql_group_replication_hostgroups\G
 *************************** 1. row ***************************
-       table: mysql_replication_hostgroups
-Create Table: CREATE TABLE mysql_replication_hostgroups (
+       table: mysql_group_replication_hostgroups
+Create Table: CREATE TABLE mysql_group_replication_hostgroups (
     writer_hostgroup INT CHECK (writer_hostgroup>=0) NOT NULL PRIMARY KEY,
-    reader_hostgroup INT NOT NULL CHECK (reader_hostgroup<>writer_hostgroup AND reader_hostgroup>=0),
-    check_type VARCHAR CHECK (LOWER(check_type) IN ('read_only','innodb_read_only','super_read_only','read_only|innodb_read_only','read_only&innodb_read_only')) NOT NULL DEFAULT 'read_only',
-    comment VARCHAR NOT NULL DEFAULT '', UNIQUE (reader_hostgroup))
-1 row in set (0.00 sec)
+    backup_writer_hostgroup INT CHECK (backup_writer_hostgroup>=0 AND backup_writer_hostgroup<>writer_hostgroup) NOT NULL,
+    reader_hostgroup INT NOT NULL CHECK (reader_hostgroup<>writer_hostgroup AND backup_writer_hostgroup<>reader_hostgroup AND reader_hostgroup>0),
+    offline_hostgroup INT NOT NULL CHECK (offline_hostgroup<>writer_hostgroup AND offline_hostgroup<>reader_hostgroup AND backup_writer_hostgroup<>offline_hostgroup AND offline_hostgroup>=0),
+    active INT CHECK (active IN (0,1)) NOT NULL DEFAULT 1,
+    max_writers INT NOT NULL CHECK (max_writers >= 0) DEFAULT 1,
+    writer_is_also_reader INT CHECK (writer_is_also_reader IN (0,1,2)) NOT NULL DEFAULT 0,
+    max_transactions_behind INT CHECK (max_transactions_behind>=0) NOT NULL DEFAULT 0,
+    comment VARCHAR,
+    UNIQUE (reader_hostgroup),
+    UNIQUE (offline_hostgroup),
+    UNIQUE (backup_writer_hostgroup))
+1 row in set (0.01 sec)
+
 ```
 ## 六、配置MySQL复制集群中的IP及端口，默认hostgroup_id都设置为1
 将MGR中的节点信息写入mysql_servers表中
@@ -383,8 +392,14 @@ Admin> select * from mysql_group_replication_hostgroups;
 注：writer_is_also_reader=1时primary节点也会有读负载。
 
 为了保证primary节点和secondary节点读到一致的数据。
-max_transactions_behind=N参数配置后，如果从节点事务延时个数超过N后，
-secondary节点将不再有读负载，从reader_hostgroup组中移除，直到延时事务个数降到N以下，节点重新加入reader_hostgroup组。
+
+max_transactions_behind=N参数配置后，如果从节点事务延时个数超过N后（mysql_server_group_replication_log中会有记录）
+
+secondary节点将不再有读负载，从reader_hostgroup组中移除，
+
+直到延时事务个数降到N以下，节点重新加入reader_hostgroup组。
+
+默认状态下
 
 ## 十二、配置生效后查看状态，会对MySQLserver进行分组
 可以观察到160和151被分配到hostgroup_id=3的组中，即reader_hostgroup
@@ -709,3 +724,10 @@ save mysql variables to disk;
 每10秒钟进行一次连接，保证proxysql到mysql的连接存在
 
 更改完成后，不再报错
+```sql
+set mysql-threads = 64;
+SAVE MYSQL VARIABLES TO DISK;
+PROXYSQL RESTART
+```
+配置生效
+
