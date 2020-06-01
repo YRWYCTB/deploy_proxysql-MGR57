@@ -288,7 +288,7 @@ Create Table: CREATE TABLE mysql_group_replication_hostgroups (
 1 row in set (0.01 sec)
 
 ```
-## 六、配置MySQL复制集群中的IP及端口，默认hostgroup_id都设置为1
+## 四、配置MySQL复制集群中的IP及端口，默认hostgroup_id都设置为1
 将MGR中的节点信息写入mysql_servers表中
 ```sql
 INSERT INTO mysql_servers(hostgroup_id, hostname, port) VALUES (1,'172.18.0.151',3317);
@@ -312,7 +312,7 @@ load mysql servers to run;
 save mysql servers to disk;
 ```
 
-## 七、设置proxysql监控mysql的用户。
+## 五、设置proxysql监控mysql的用户。
 
 MySQL集群中创建如下用户：
 ```sql 
@@ -332,7 +332,7 @@ Admin>load mysql variables to runtime;
 ```sql 
 Admin>save mysql variables to disk;
 ```
-## 八、查看监控日志，在monitor用户增加完成后，connect_error为NULL,表示配置正常。
+## 六、查看监控日志，在monitor用户增加完成后，connect_error为NULL,表示配置正常。
 ```sql 
 Admin> select * from mysql_server_connect_log;
 +--------------+------+------------------+-------------------------+---------------+
@@ -348,7 +348,7 @@ Admin> select * from mysql_server_connect_log;
 | 172.18.0.152 | 3317 | 1590582280526936 | 1210                    | NULL          |
 ```
 
-## 九、下表将监控MySQL实例是否alive.
+## 七、下表将监控MySQL实例是否alive.
 ```sql 
 Admin> select * from mysql_server_ping_log limit 10;
 +--------------+------+------------------+----------------------+------------+
@@ -365,12 +365,12 @@ Admin> select * from mysql_server_ping_log limit 10;
 10 rows in set (0.01 sec)
 ```
 
-## 十、查看mysql_server_group_replication_log此时为空
+## 八、查看mysql_server_group_replication_log此时为空
 该表中记录monitor用户查询sys.gr_member_routing_candidate_status视图的结果，
 
 需要配置mysql_group_replication_hostgroups后，mysql_server_group_replication_log才会写入信息。
 
-## 十一、配置MGR集群分组表：mysql_group_replication_hostgroups
+## 九、配置MGR集群分组表：mysql_group_replication_hostgroups
 
 proxysql通过监控后台sys.gr_member_routing_candidate_status视图（必须创建）;proxysql将节点分组
 
@@ -401,7 +401,7 @@ secondary节点将不再有读负载，从reader_hostgroup组中移除，
 
 默认状态下
 
-## 十二、配置生效后查看状态，会对MySQLserver进行分组
+## 十、配置生效后查看状态，会对MySQLserver进行分组
 可以观察到160和151被分配到hostgroup_id=3的组中，即reader_hostgroup
 
 可以更新mysql_servers表中的weight值，对读负载量进行配置
@@ -424,7 +424,7 @@ Admin> select * from runtime_mysql_servers;
 +--------------+--------------+------+-----------+--------+--------+-------------+-----------------+---------------------+---------+----------------+---------+
 ```
 
-## 十三、查看mysql_server_group_replication_log监控状态：
+## 十一、查看mysql_server_group_replication_log监控状态：
 使用如下命令可以看到MGR节点的状态，其中只有主节点read_only为NO
 ```sql 
 Admin> select * from mysql_server_group_replication_log limit 3;
@@ -437,7 +437,7 @@ Admin> select * from mysql_server_group_replication_log limit 3;
 +--------------+------+------------------+-----------------+------------------+-----------+---------------------+-------+
 ```
 
-## 十四、创建用户，配置基于用户的读写分离
+## 十二、创建用户，配置基于用户的读写分离
 MGR中创建用户
 ```sql 
 create user reader identified by 'passwd';
@@ -512,7 +512,7 @@ mysql: [Warning] Using a password on the command line interface can be insecure.
 +-------------+
 [root@dzst140 ~]# 
 ```
-## 十五、主节点也可读，基于sql语句的读写分离
+## 十三、主节点也可读，基于sql语句的读写分离
 ```sql
 Admin>update mysql_group_replication_hostgroups set writer_is_also_reader =1;
 Query OK, 1 row affected (0.00 sec)
@@ -706,28 +706,37 @@ Admin> SELECT hostgroup,digest,SUBSTR(digest_text,0,25),count_star,sum_time FROM
 +-----------+--------------------+--------------------------+------------+----------+
 100 rows in set (0.01 sec)
 ```
-## 十六、其他配置
-```sql 
-set mysql-ping_interval_server_msec=10000;
-load mysql variables to runtime;
-save mysql variables to disk;
-```
-
+## 十四、其他配置
+### 14.1 线程的ping_interval_time
 由于在后台mysql的server端设置了连接超时，对于sleep的线程，超时后将会被kill
 
 在数据流量小的情况下，会有连接被kill，但是proxysql在再次请求mysql的时候并不知道上次的连接已经断开，
 
 直接使用上次的连接进行操作，将会出现问题。
-
+```sql 
+set mysql-ping_interval_server_msec=10000;
+load mysql variables to runtime;
+save mysql variables to disk;
+```
 更改proxysql中上述参数
 
 每10秒钟进行一次连接，保证proxysql到mysql的连接存在
 
 更改完成后，不再报错
+
+### 14.2 更改proxysql连接到MySQL_server的线程数
 ```sql
 set mysql-threads = 64;
 SAVE MYSQL VARIABLES TO DISK;
 PROXYSQL RESTART
 ```
-配置生效
+该配置需要重启后生效
 
+### 14.3 proxysql提供MySQL服务的端口更改
+执行如下命令
+```sql
+set mysql-interfaces=  0.0.0.0:3306;
+SAVE MYSQL VARIABLES TO DISK;
+PROXYSQL RESTART
+```
+更改该端口也需要重启proxysql，配置才能生效
