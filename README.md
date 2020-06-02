@@ -715,10 +715,13 @@ Admin> SELECT hostgroup,digest,SUBSTR(digest_text,0,25),count_star,sum_time FROM
 直接使用上次的连接进行操作，将会出现问题。
 ```sql 
 set mysql-ping_interval_server_msec=10000;
+set mysql-monitor_groupreplication_healthcheck_interval = 1000;
 load mysql variables to runtime;
 save mysql variables to disk;
 ```
 更改proxysql中上述参数
+
+每秒查询一次sys.gr_member_routing_candidate_status以获取MGR中节点状态
 
 每10秒钟进行一次连接，保证proxysql到mysql的连接存在
 
