@@ -743,3 +743,6 @@ SAVE MYSQL VARIABLES TO DISK;
 PROXYSQL RESTART
 ```
 更改该端口也需要重启proxysql，配置才能生效
+
+### 14.4 proxysql访问MySQL用户权限问题
+需要在MySQL中创建允许proxysql所在IP可以登录MySQL的用户。
