@@ -748,12 +748,13 @@ PROXYSQL RESTART
 需要在MySQL中创建允许proxysql所在IP可以登录MySQL的用户。
 
 ### 14.5 proxysql中管理用户的设置
-默认情况下管理用户只允许在proxysql本机登录
+默认情况下管理用户只允许在proxysql本机登录，远程登录出现如下错误：
 ```sh
 [root@dzst160 ~]# mysql -u admin  -padmin  -h172.18.0.140 -P6032 --prompt='Admin>'
 mysql: [Warning] Using a password on the command line interface can be insecure.
+ERROR 1040 (42000): User 'admin' can only connect locally
 ```
-如果要在proxysql中配置远程登录需要增加管理用户
+如果要在proxysql中配置远程登录，需要增加管理用户：
 ```sql
 Admin>set admin-admin_credentials='admin:admin;myuser:myuser';
 Query OK, 1 row affected (0.03 sec)
