@@ -746,3 +746,45 @@ PROXYSQL RESTART
 
 ### 14.4 proxysql访问MySQL用户权限问题
 需要在MySQL中创建允许proxysql所在IP可以登录MySQL的用户。
+
+### 14.5 proxysql中管理用户的设置
+默认情况下管理用户只允许在proxysql本机登录
+```sh
+[root@dzst160 ~]# mysql -u admin  -padmin  -h172.18.0.140 -P6032 --prompt='Admin>'
+mysql: [Warning] Using a password on the command line interface can be insecure.
+```
+如果要在proxysql中配置远程登录需要增加管理用户
+```sql
+Admin>set admin-admin_credentials='admin:admin;myuser:myuser';
+Query OK, 1 row affected (0.03 sec)
+
+Admin>load admin variables to runtime;
+Query OK, 0 rows affected (0.01 sec)
+
+Admin>save admin variables to disk;
+Query OK, 35 rows affected (0.01 sec)
+```
+使用该用户进行远程管理
+```sh
+[root@dzst160 ~]# mysql -u myuser  -pmyuser  -h172.18.0.140 -P6032 --prompt='Admin>'
+mysql: [Warning] Using a password on the command line interface can be insecure.
+Welcome to the MySQL monitor.  Commands end with ; or \g.
+Your MySQL connection id is 60
+Server version: 5.7.30 (ProxySQL Admin Module)
+
+Copyright (c) 2000, 2020, Oracle and/or its affiliates. All rights reserved.
+
+Oracle is a registered trademark of Oracle Corporation and/or its
+affiliates. Other names may be trademarks of their respective
+owners.
+
+Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
+
+Admin>show variables;
++--------------------------------------------------------------+-----------------------------+
+| Variable_name                                                | Value                       |
++--------------------------------------------------------------+-----------------------------+
+| admin-admin_credentials                                      | admin:admin;myuser:myuser   |
+| admin-checksum_mysql_query_rules                             | true                        |
+```
+
