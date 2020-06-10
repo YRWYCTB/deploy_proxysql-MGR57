@@ -789,3 +789,9 @@ Admin>show variables;
 | admin-checksum_mysql_query_rules                             | true                        |
 ```
 
+### 14.6 proxysql对于MGR中节点的健康检查频率 groupreplication_healthcheck_interval
+```sql
+set mysql-monitor_groupreplication_healthcheck_interval=10000;
+load mysql variables to runtime;
+save mysql variables to disk;
+```
