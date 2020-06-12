@@ -715,13 +715,10 @@ Admin> SELECT hostgroup,digest,SUBSTR(digest_text,0,25),count_star,sum_time FROM
 直接使用上次的连接进行操作，将会出现问题。
 ```sql 
 set mysql-ping_interval_server_msec=10000;
-set mysql-monitor_groupreplication_healthcheck_interval = 1000;
 load mysql variables to runtime;
 save mysql variables to disk;
 ```
 更改proxysql中上述参数
-
-每秒查询一次sys.gr_member_routing_candidate_status以获取MGR中节点状态
 
 每10秒钟进行一次连接，保证proxysql到mysql的连接存在
 
@@ -747,6 +744,7 @@ PROXYSQL RESTART
 ### 14.4 proxysql访问MySQL用户权限问题
 需要在MySQL中创建允许proxysql所在IP可以登录MySQL的用户。
 
+当应用通过proxysql访问数据库时，proxysql使用该应用访问proxysql的用户名和密码及proxysql的IP访问数据库。
 ### 14.5 proxysql中管理用户的设置
 默认情况下管理用户只允许在proxysql本机登录，远程登录出现如下错误：
 ```sh
@@ -790,6 +788,7 @@ Admin>show variables;
 ```
 
 ### 14.6 proxysql对于MGR中节点的健康检查频率 groupreplication_healthcheck_interval
+每秒查询一次sys.gr_member_routing_candidate_status以获取MGR中节点状态
 ```sql
 set mysql-monitor_groupreplication_healthcheck_interval=10000;
 load mysql variables to runtime;
