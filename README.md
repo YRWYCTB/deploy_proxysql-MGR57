@@ -813,7 +813,7 @@ Admin>select * from runtime_mysql_group_replication_hostgroups;
 +------------------+-------------------------+------------------+-------------------+--------+-------------+-----------------------+-------------------------+---------+
 1 row in set (0.01 sec)
 ```
-其中国：1组为写组，3组为读组
+当前分组情况：1组为写组，3组为读组
 
 按如下规则配置，连接6301端口的sql最终将会路由的primary节点，访问6302端口的sql最终将到secondary节点
 proxysql增加如下配置
@@ -824,3 +824,26 @@ LOAD MYSQL QUERY RULES TO RUNTIME;
 SAVE MYSQL QUERY RULES TO DISK; # if you want this change to be permanent
 ```
 使用两个端口连接proxysql，最终将分发的不同组的实例中
+```sh
+[zhaofeng.tian@l-betadb1.ops.p1 ~]$ /home/q/mysql/base/bin/mysql -umgr_user -pbeemgr -hl-betadb2.ops.p1 -P6302 -e "select @@server_id"
+mysql: [Warning] Using a password on the command line interface can be insecure.
++-------------+
+| @@server_id |
++-------------+
+|    10640175 |
++-------------+
+[zhaofeng.tian@l-betadb1.ops.p1 ~]$ /home/q/mysql/base/bin/mysql -umgr_user -pbeemgr -hl-betadb2.ops.p1 -P6302 -e "select @@server_id"
+mysql: [Warning] Using a password on the command line interface can be insecure.
++-------------+
+| @@server_id |
++-------------+
+|    10640174 |
++-------------+
+[zhaofeng.tian@l-betadb1.ops.p1 ~]$ /home/q/mysql/base/bin/mysql -umgr_user -pbeemgr -hl-betadb2.ops.p1 -P6301 -e "select @@server_id"
+mysql: [Warning] Using a password on the command line interface can be insecure.
++-------------+
+| @@server_id |
++-------------+
+|     1062010 |
++-------------+
+```
