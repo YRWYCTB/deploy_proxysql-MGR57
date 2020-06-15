@@ -825,21 +825,21 @@ SAVE MYSQL QUERY RULES TO DISK; # if you want this change to be permanent
 ```
 使用两个端口连接proxysql，最终将分发的不同组的实例中
 ```sh
-[zhaofeng.tian@l-betadb1.ops.p1 ~]$ /home/q/mysql/base/bin/mysql -umgr_user -pbeemgr -hl-betadb2.ops.p1 -P6302 -e "select @@server_id"
+[zhaofeng.tian@l-betadb1.ops.p1 ~]$ /home/q/mysql/base/bin/mysql -uxxx -pxxxx -hl-betadb2.xxx -P6302 -e "select @@server_id"
 mysql: [Warning] Using a password on the command line interface can be insecure.
 +-------------+
 | @@server_id |
 +-------------+
 |    10640175 |
 +-------------+
-[zhaofeng.tian@l-betadb1.ops.p1 ~]$ /home/q/mysql/base/bin/mysql -umgr_user -pbeemgr -hl-betadb2.ops.p1 -P6302 -e "select @@server_id"
+[zhaofeng.tian@l-betadb1.ops.p1 ~]$ /home/q/mysql/base/bin/mysql -uxxx -pxxx -hl-betadb2.xxx -P6302 -e "select @@server_id"
 mysql: [Warning] Using a password on the command line interface can be insecure.
 +-------------+
 | @@server_id |
 +-------------+
 |    10640174 |
 +-------------+
-[zhaofeng.tian@l-betadb1.ops.p1 ~]$ /home/q/mysql/base/bin/mysql -umgr_user -pbeemgr -hl-betadb2.ops.p1 -P6301 -e "select @@server_id"
+[zhaofeng.tian@l-betadb1.ops.p1 ~]$ /home/q/mysql/base/bin/mysql -uxx -pxxx -hl-betadb2.xxx -P6301 -e "select @@server_id"
 mysql: [Warning] Using a password on the command line interface can be insecure.
 +-------------+
 | @@server_id |
