@@ -794,3 +794,33 @@ set mysql-monitor_groupreplication_healthcheck_interval=10000;
 load mysql variables to runtime;
 save mysql variables to disk;
 ```
+## 十五、基于端口号的读写分离设置
+
+### 15.1 proxysql设置两个端口，并重启proxysql
+```sql
+SET mysql-interfaces='0.0.0.0:6301;0.0.0.0:6302';
+## save it on disk and restart proxysql
+SAVE MYSQL VARIABLES TO DISK;
+PROXYSQL RESTART;
+```
+### 15.2 当前分组情况如下
+```sql
+Admin>select * from runtime_mysql_group_replication_hostgroups;
++------------------+-------------------------+------------------+-------------------+--------+-------------+-----------------------+-------------------------+---------+
+| writer_hostgroup | backup_writer_hostgroup | reader_hostgroup | offline_hostgroup | active | max_writers | writer_is_also_reader | max_transactions_behind | comment |
++------------------+-------------------------+------------------+-------------------+--------+-------------+-----------------------+-------------------------+---------+
+| 1                | 2                       | 3                | 4                 | 1      | 1           | 1                     | 0                       | NULL    |
++------------------+-------------------------+------------------+-------------------+--------+-------------+-----------------------+-------------------------+---------+
+1 row in set (0.01 sec)
+```
+其中国：1组为写组，3组为读组
+
+按如下规则配置，连接6301端口的sql最终将会路由的primary节点，访问6302端口的sql最终将到secondary节点
+proxysql增加如下配置
+```sql
+delete from mysql_query_rules;
+INSERT INTO mysql_query_rules (rule_id,active,proxy_port,destination_hostgroup,apply) VALUES (1,1,6301,1,1), (2,1,6302,3,1);
+LOAD MYSQL QUERY RULES TO RUNTIME;
+SAVE MYSQL QUERY RULES TO DISK; # if you want this change to be permanent
+```
+使用两个端口连接proxysql，最终将分发的不同组的实例中
