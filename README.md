@@ -545,6 +545,9 @@ SAVE MYSQL USERS TO DISK;
 
 INSERT INTO mysql_query_rules (rule_id,active,username,match_pattern,destination_hostgroup,apply)
 VALUES(1,1,'tian','^SELECT.*FOR UPDATE$',1,1),(2,1,'tian','^SELECT',3,1);
+不写user_name即可对所有用户应用该规则
+INSERT INTO mysql_query_rules (rule_id,active,match_pattern,destination_hostgroup,apply)
+VALUES(1,1,'^SELECT.*FOR UPDATE$',1,1),(2,1,'^SELECT',3,1);
 LOAD MYSQL QUERY RULES TO RUNTIME;
 SAVE MYSQL QUERY RULES TO DISK;
 ```
