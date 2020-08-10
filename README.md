@@ -793,7 +793,7 @@ Admin>show variables;
 ### 14.6 proxysql对于MGR中节点的健康检查频率 groupreplication_healthcheck_interval
 每秒查询一次sys.gr_member_routing_candidate_status以获取MGR中节点状态
 ```sql
-set mysql-monitor_groupreplication_healthcheck_interval=10000;
+set mysql-monitor_groupreplication_healthcheck_interval=1000;
 load mysql variables to runtime;
 save mysql variables to disk;
 ```
