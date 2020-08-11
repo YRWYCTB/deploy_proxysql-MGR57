@@ -107,6 +107,12 @@ mysql> select * from sys.gr_member_routing_candidate_status;
 
 ## 一、安装proxysql，操作系统centos7
 
+硬件要求
+
+如果没有条件限制，选最高配，主要是CPU要好点，对内存需求不大，注意： CPU，网卡  性能要好。
+
+CPU要关闭节能模式， 网卡要确认多队列打开
+
 ### 1.1下载安装包
 ```sh
 wget https://github.com/sysown/proxysql/releases/download/v2.0.12/proxysql-2.0.12-1-centos7.x86_64.rpm
