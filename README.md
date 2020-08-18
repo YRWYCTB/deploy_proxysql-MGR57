@@ -856,3 +856,86 @@ mysql: [Warning] Using a password on the command line interface can be insecure.
 |     1062010 |
 +-------------+
 ```
+## 十六、proxysql白名单设置
+### 1、在mysql_firewall_whitelist_users表中插入用户名及IP
+```sql
+insert into mysql_firewall_whitelist_users values(1,'superset_r','10.64.4.154','OFF','superest_r bounding 10.64.4.154');
+LOAD MYSQL FIREWALL TO RUNTIME;
+SAVE MYSQL FIREWALL TO DISK;
+```
+### 2、更新系统变量，打开白名单功能
+```sql
+set mysql-firewall_whitelist_enabled =1;
+load mysql variables to run;
+save mysql variables to disk;
+```
+### 3、在IP为10.64.4.154机器上访问proxysql,可以正常访问
+```sh
+[zhaofeng.tian@l-dataplatform2.tc.p1 ~]$ ifconfig
+eth0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
+        inet 10.64.4.154  netmask 255.255.252.0  broadcast 10.64.7.255
+        inet6 fe80::f816:3eff:fe05:d19f  prefixlen 64  scopeid 0x20<link>
+        ether fa:16:3e:05:d1:9f  txqueuelen 1000  (Ethernet)
+        RX packets 6536677770  bytes 3334157486878 (3.0 TiB)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 3857845578  bytes 1831162143290 (1.6 TiB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+[zhaofeng.tian@l-dataplatform2.tc.p1 ~]$ mysql -h10.64.6.128 -usuperset_r -pxxxxx -P6033
+Welcome to the MariaDB monitor.  Commands end with ; or \g.
+Your MySQL connection id is 9
+Server version: 5.5.30 (ProxySQL)
+
+Copyright (c) 2000, 2016, Oracle, MariaDB Corporation Ab and others.
+
+Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
+```
+```sql
+MySQL [(none)]> show databases;
++-------------------------------+
+| Database                      |
++-------------------------------+
+| information_schema            |
+| ai_data                       |
+| daily_output                  |
+| data_corp_new                 |
+| hrm_human_system              |
+| mysql                         |
+| mysql_innodb_cluster_metadata |
+| performance_schema            |
+| qmq_produce                   |
+| security                      |
+| sonar                         |
+| sys                           |
+| test_db                       |
+| tomexam3_free                 |
++-------------------------------+
+14 rows in set (0.00 sec)
+```
+### 3、在IP不为10.64.4.154机器上访问proxysql,返回错误
+```sh
+[zhaofeng.tian@l-dataplatform1.tc.p1 ~]$ ifconfig
+eth0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
+        inet 10.64.5.54  netmask 255.255.252.0  broadcast 10.64.7.255
+        inet6 fe80::f816:3eff:feb6:4182  prefixlen 64  scopeid 0x20<link>
+        ether fa:16:3e:b6:41:82  txqueuelen 1000  (Ethernet)
+        RX packets 3380835493  bytes 224460849203 (209.0 GiB)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 185573851  bytes 35384106424 (32.9 GiB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+[zhaofeng.tian@l-dataplatform1.tc.p1 ~]$ mysql -h10.64.6.128 -usuperset_r -pxxxxxx -P6033
+Welcome to the MariaDB monitor.  Commands end with ; or \g.
+Your MySQL connection id is 10
+Server version: 5.5.30 (ProxySQL)
+
+Copyright (c) 2000, 2016, Oracle, MariaDB Corporation Ab and others.
+
+Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
+```
+```sql
+MySQL [(none)]> show databases;
+ERROR 1148 (42000): Firewall blocked this query
+MySQL [(none)]> quit
+Bye
+```
+
+
