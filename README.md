@@ -937,5 +937,21 @@ ERROR 1148 (42000): Firewall blocked this query
 MySQL [(none)]> quit
 Bye
 ```
+## 十七、proxysql读写分离设置
+### 1、使用 十三中的读写分离策略存在的问题
+如果将runtime_mysql_group_replication_hostgroups表中max_transactions_behind设置为0，在从节点有事务延时时，proxysql会更新runtime_mysql_group_replication_hostgroups，
 
+将延时的节点剔除，这样原来与该从节点建立的连接会被proxysql关闭，对于Java项目来说，使用连接池的情况下，会经常出现连接丢失的报错。
+
+为此，将max_transactions_behind设置为1000，这样在绝大多数情况下，不会再出现连接丢失的情况。
+
+但是应用可能会读到过期数据，这对于某些订单和支付的接口来说是不能接受的，
+
+为解决这个问题，不再使用十三中的匹配sql语句的读写分离策略。
+
+让所有的读写都去主节点，暂时proxysql不再做读写分离，只使用其故障转移功能。
+
+后期使用proxysql将统计到的查询耗时的sql，并且及时性不强的sql进行读写分离，让从节点分担一些负载。
+
+该方式也是官方最推荐的方式。
 
